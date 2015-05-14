@@ -395,11 +395,13 @@ return code;
 
 #if defined(HAVE_LZ4)
 static int lz4_wrap_compress(const char* input, size_t input_length,
-                             char* output, size_t maxout)
+                             char* output, size_t maxout, int clevel)
 {
-  int cbytes;
-  cbytes = LZ4_compress_limitedOutput(input, output, (int)input_length,
-                                      (int)maxout);
+  int cbytes, accel;
+  /* This acceleration setting based on experiments in:
+     https://groups.google.com/forum/#!topic/lz4c/zosy90P8MQw */
+  accel = 20 - 2 * clevel - 1;
+  cbytes = LZ4_compress_fast(input, output, (int)input_length, (int)maxout, accel);
   return cbytes;
 }
 
@@ -542,7 +544,7 @@ static int blosc_c(const struct blosc_context* context, int32_t blocksize, int32
     #if defined(HAVE_LZ4)
     else if (context->compcode == BLOSC_LZ4) {
       cbytes = lz4_wrap_compress((char *)_tmp+j*neblock, (size_t)neblock,
-                                 (char *)dest, (size_t)maxout);
+                                 (char *)dest, (size_t)maxout, context->clevel);
     }
     else if (context->compcode == BLOSC_LZ4HC) {
       cbytes = lz4hc_wrap_compress((char *)_tmp+j*neblock, (size_t)neblock,
