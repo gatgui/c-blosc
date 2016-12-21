@@ -91,10 +91,10 @@ def CustomConfig(env):
 
 def RequireBlosc(env):
    env.Append(LIBS=["blosc"])
-   if excons.GetArgument("static", 0, int) == 0:
+   if not cfg["static"]:
       env.Append(CPPDFINES=["BLOSC_SHARED_LIBRARY"])
    else:
-     threads.Require(env)
+      threads.Require(env)
 
 Export("RequireBlosc")
 
