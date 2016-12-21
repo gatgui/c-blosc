@@ -1,4 +1,6 @@
-bench/bench
-build/
-
-*.sw?
+/.build
+/release
+/debug
+*.dblite
+excons.cache
+blosc/config.h
