@@ -93,7 +93,7 @@ def RequireBlosc(env):
    env.Append(LIBS=["blosc"])
    if excons.GetArgument("static", 0, int) == 0:
       env.Append(CPPDFINES=["BLOSC_SHARED_LIBRARY"])
-   else
+   else:
      threads.Require(env)
 
 Export("RequireBlosc")
