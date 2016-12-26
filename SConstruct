@@ -72,13 +72,14 @@ if not cfg["static"]:
    defs.append("BLOSC_SHARED_LIBRARY")
 
 if sys.platform == "win32":
-   incdirs.append("blosc/win32")
-   srcs.extend(glob.glob("blosc/win32/*.c"))
+   defs.extend(["_CRT_NONSTDC_NO_DEPRECATE", "_CRT_SECURE_NO_WARNINGS"])
 
 def CustomConfig(env):
    if cfg["sse2"]:
       if sys.platform == "win32":
-         env.Append(CCFLAGS=" /arch:SSE2")
+         # On 64 bit arch, SSE2 is one by default
+         #env.Append(CCFLAGS=" /arch:SSE2")
+         pass
       else:
          env.Append(CCFLAGS=" -msse2")
    if cfg["avx2"]:
