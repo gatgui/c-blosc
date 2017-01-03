@@ -107,4 +107,7 @@ projs = [
    }
 ]
 
-excons.DeclareTargets(env, projs)
+targets = excons.DeclareTargets(env, projs)
+
+env.Depends(targets["blosc"], blosc_headers)
+env.Depends(targets["blosc_s"], blosc_headers)
