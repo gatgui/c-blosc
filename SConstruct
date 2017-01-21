@@ -4,6 +4,23 @@ import glob
 import excons
 import excons.tools.threads as threads
 
+Help("""USAGE
+   scons [OPTIONS] TARGET*
+
+AVAILABLE TARGETS
+   blosc   : Shared library
+   blosc_s : Static library
+
+BLOSC OPTIONS
+   no-lz4=0|1    : Disable lz4 support    [0]
+   no-snappy=0|1 : Disable snappy support [0]
+   no-zlib=0|1   : Disable zlib support   [0]
+   no-zstd=0|1   : Disable zstd support   [0]
+   with-sse2=0|1 : Enable SSE2 support    [1]
+   with-avx2=0|1 : Enable AVX2 support    [0]
+
+""" + excons.GetOptionsString())
+
 env = excons.MakeBaseEnv()
 
 cfg = {
