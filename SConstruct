@@ -4,7 +4,7 @@ import glob
 import excons
 import excons.tools.threads as threads
 
-Help("""USAGE
+excons.SetHelp("""USAGE
    scons [OPTIONS] TARGET*
 
 AVAILABLE TARGETS
