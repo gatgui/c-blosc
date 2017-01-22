@@ -4,22 +4,6 @@ import glob
 import excons
 import excons.tools.threads as threads
 
-excons.SetHelp("""USAGE
-   scons [OPTIONS] TARGET*
-
-AVAILABLE TARGETS
-   blosc   : Shared library
-   blosc_s : Static library
-
-BLOSC OPTIONS
-   no-lz4=0|1    : Disable lz4 support    [0]
-   no-snappy=0|1 : Disable snappy support [0]
-   no-zlib=0|1   : Disable zlib support   [0]
-   no-zstd=0|1   : Disable zstd support   [0]
-   with-sse2=0|1 : Enable SSE2 support    [1]
-   with-avx2=0|1 : Enable AVX2 support    [0]
-
-""" + excons.GetOptionsString())
 
 env = excons.MakeBaseEnv()
 
@@ -85,6 +69,15 @@ if cfg["avx2"]:
 if sys.platform == "win32":
    defs.extend(["_CRT_NONSTDC_NO_DEPRECATE", "_CRT_SECURE_NO_WARNINGS"])
 
+
+build_opts = """BLOSC OPTIONS
+   no-lz4=0|1    : Disable lz4 support    [0]
+   no-snappy=0|1 : Disable snappy support [0]
+   no-zlib=0|1   : Disable zlib support   [0]
+   no-zstd=0|1   : Disable zstd support   [0]
+   with-sse2=0|1 : Enable SSE2 support    [1]
+   with-avx2=0|1 : Enable AVX2 support    [0]"""
+
 def RequireBlosc(static=False):
    def _RealRequire(env):
       env.Append(LIBS=["blosc%s" % ("_s" if static else "")])
@@ -92,6 +85,8 @@ def RequireBlosc(static=False):
          env.Append(CPPDFINES=["BLOSC_SHARED_LIBRARY"])
       else:
          threads.Require(env)
+      
+      excons.AddHelpOptions(blosc=build_opts)
 
    return _RealRequire
 
@@ -103,6 +98,7 @@ projs = [
    {
       "name": "blosc_s",
       "type": "staticlib",
+      "desc": "Blosc static library",
       "bldprefix": "static",
       "defs": defs,
       "ccflags": ccflags,
@@ -112,6 +108,7 @@ projs = [
    {
       "name": "blosc",
       "type": "sharedlib",
+      "desc": "Blosc shared library",
       "bldprefix": "shared",
       "version": "1.11.1",
       "soname": "libblosc.so.1",
@@ -123,6 +120,8 @@ projs = [
       "custom": [threads.Require]
    }
 ]
+
+excons.AddHelpOptions(blosc=build_opts)
 
 targets = excons.DeclareTargets(env, projs)
 
