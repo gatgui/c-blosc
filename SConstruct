@@ -11,33 +11,52 @@ cfg = {
    "snappy": (excons.GetArgument("blosc-no-snappy", 0, int) == 0),
    "zlib": (excons.GetArgument("blosc-no-zlib", 0, int) == 0),
    "zstd": (excons.GetArgument("blosc-no-zstd", 0, int) == 0),
-   "sse2": (excons.GetArgument("blosc-with-sse2", 1, int) != 0),
-   "avx2": (excons.GetArgument("blosc-with-avx2", 0, int) != 0)
+   "sse2": (excons.GetArgument("blosc-sse2", 1, int) != 0),
+   "avx2": (excons.GetArgument("blosc-avx2", 0, int) != 0)
 }
 
 out_headers_dir = "%s/include" % excons.OutputBaseDirectory()
 
 defs = []
-incdirs = [out_headers_dir, "blosc"]
+incdirs = ["blosc"]
 ccflags = []
 srcs = filter(lambda x: "-sse2" not in x and "-avx2" not in x, excons.glob("blosc/*.c"))
 customs = []
 
+# Lz4 setup
 if cfg["lz4"]:
    defs.append("HAVE_LZ4")
    incdirs.append("internal-complibs/lz4-1.7.5")
    srcs.extend(excons.glob("internal-complibs/lz4-1.7.5/*.c"))
 
+# Snappy setup
 if cfg["snappy"]:
    defs.append("HAVE_SNAPPY")
    incdirs.append("internal-complibs/snappy-1.1.1")
    srcs.extend(excons.glob("internal-complibs/snappy-1.1.1/*.cc"))
 
+# Zlib setup
+def zlibName(static):
+   return ("z" if sys.platform != "win32" else ("zlib" if static else "zdll"))
+
+def zlibDefines(static):
+   return ([] if static else ["ZLIB_DLL"])
+
+def zlibIgnore(env):
+   pass
+
 if cfg["zlib"]:
    defs.append("HAVE_ZLIB")
-   incdirs.append("internal-complibs/zlib-1.2.8")
-   srcs.extend(excons.glob("internal-complibs/zlib-1.2.8/*.c"))
+rv = excons.ExternalLibRequire("zlib", libnameFunc=zlibName, definesFunc=zlibDefines)
+if not rv["require"]:
+   if cfg["zlib"]:
+      incdirs.append("internal-complibs/zlib-1.2.8")
+      srcs.extend(excons.glob("internal-complibs/zlib-1.2.8/*.c"))
+   zlibRequire = zlibIgnore
+else:
+   zlibRequire = (rv["require"] if cfg["zlib"] else zlibIgnore)
 
+# Zstd setup
 if cfg["zstd"]:
    defs.append("HAVE_ZSTD")
    incdirs.extend(["internal-complibs/zstd-1.1.4",
@@ -66,16 +85,16 @@ if cfg["avx2"]:
    srcs.extend(filter(lambda x: "-avx2" in x, excons.glob("blosc/*.c")))
 
 if sys.platform == "win32":
-   defs.extend(["_CRT_NONSTDC_NO_DEPRECATE", "_CRT_SECURE_NO_WARNINGS"])
+   defs.extend(["_CRT_NONSTDC_NO_DEPRECATE"])
 
 
 build_opts = """BLOSC OPTIONS
-   no-lz4=0|1    : Disable lz4 support    [0]
-   no-snappy=0|1 : Disable snappy support [0]
-   no-zlib=0|1   : Disable zlib support   [0]
-   no-zstd=0|1   : Disable zstd support   [0]
-   with-sse2=0|1 : Enable SSE2 support    [1]
-   with-avx2=0|1 : Enable AVX2 support    [0]"""
+   blosc-no-lz4=0|1    : Disable lz4 support    [0]
+   blosc-no-snappy=0|1 : Disable snappy support [0]
+   blosc-no-zlib=0|1   : Disable zlib support   [0]
+   blosc-no-zstd=0|1   : Disable zstd support   [0]
+   blosc-sse2=0|1      : Enable SSE2 support    [1]
+   blosc-avx2=0|1      : Enable AVX2 support    [0]"""
 
 def BloscName(static=False):
    return "blosc%s" % ("_s" if static else "")
@@ -91,10 +110,11 @@ def BloscPath(static=False):
 def RequireBlosc(env, static=False):
    if not static:
       env.Append(CPPDFINES=["BLOSC_SHARED_LIBRARY"])
-   env.Append(CPPPATH=[excons.OutputBaseDirectory() + "/include"])
-   env.Append(CPPPATH=[excons.OutputBaseDirectory() + "/lib"])
+   env.Append(CPPPATH=[out_headers_dir])
+   env.Append(LIBPATH=[excons.OutputBaseDirectory() + "/lib"])
    excons.Link(env, BloscName(static), static=static, force=True, silent=True)
    if static:
+      zlibRequire(env)
       threads.Require(env)
 
 Export("BloscName BloscPath RequireBlosc")
@@ -110,7 +130,8 @@ projs = [
       "defs": defs,
       "ccflags": ccflags,
       "incdirs": incdirs,
-      "srcs": srcs
+      "srcs": srcs,
+      "custom": [zlibRequire]
    },
    {
       "name": "blosc",
@@ -124,7 +145,7 @@ projs = [
       "ccflags": ccflags,
       "incdirs": incdirs,
       "srcs": srcs,
-      "custom": [threads.Require]
+      "custom": [zlibRequire, threads.Require]
    }
 ]
 
