@@ -111,8 +111,7 @@ def RequireBlosc(env, static=False):
    if not static:
       env.Append(CPPDFINES=["BLOSC_SHARED_LIBRARY"])
    env.Append(CPPPATH=[out_headers_dir])
-   env.Append(LIBPATH=[excons.OutputBaseDirectory() + "/lib"])
-   excons.Link(env, BloscName(static), static=static, force=True, silent=True)
+   excons.Link(env, BloscPath(static), static=static, force=True, silent=True)
    if static:
       zlibRequire(env)
       threads.Require(env)
