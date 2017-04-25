@@ -20,6 +20,7 @@ out_headers_dir = "%s/include" % excons.OutputBaseDirectory()
 defs = []
 incdirs = ["blosc"]
 ccflags = []
+cppflags = ""
 srcs = filter(lambda x: "-sse2" not in x and "-avx2" not in x, excons.glob("blosc/*.c"))
 customs = []
 
@@ -86,18 +87,26 @@ if cfg["avx2"]:
 
 if sys.platform == "win32":
    defs.extend(["_CRT_NONSTDC_NO_DEPRECATE"])
-
+else:
+   cppflags += " -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable"
 
 build_opts = """BLOSC OPTIONS
-   blosc-no-lz4=0|1    : Disable lz4 support    [0]
-   blosc-no-snappy=0|1 : Disable snappy support [0]
-   blosc-no-zlib=0|1   : Disable zlib support   [0]
-   blosc-no-zstd=0|1   : Disable zstd support   [0]
-   blosc-sse2=0|1      : Enable SSE2 support    [1]
-   blosc-avx2=0|1      : Enable AVX2 support    [0]"""
+   blosc-suffix        : Blosc library names suffix []
+   blosc-no-lz4=0|1    : Disable lz4 support        [0]
+   blosc-no-snappy=0|1 : Disable snappy support     [0]
+   blosc-no-zlib=0|1   : Disable zlib support       [0]
+   blosc-no-zstd=0|1   : Disable zstd support       [0]
+   blosc-sse2=0|1      : Enable SSE2 support        [1]
+   blosc-avx2=0|1      : Enable AVX2 support        [0]"""
 
 def BloscName(static=False):
-   return "blosc%s" % ("_s" if static else "")
+   if sys.platform == "win32" and static:
+      name = "libblosc"
+   else:
+      name = "blosc"
+   name += excons.GetArgument("blosc-suffix", "")
+   #return "blosc%s" % ("_s" if static else "")
+   return name
 
 def BloscPath(static=False):
    name = BloscName(static)
@@ -116,24 +125,25 @@ def RequireBlosc(env, static=False):
       zlibRequire(env)
       threads.Require(env)
 
-Export("BloscName BloscPath RequireBlosc")
-
 blosc_headers = env.Install(out_headers_dir, ["blosc/blosc.h", "blosc/blosc-export.h"])
 
 projs = [
    {
-      "name": "blosc_s",
+      "name": BloscName(static=True),
+      "alias": "blosc-static",
       "type": "staticlib",
       "desc": "Blosc static library",
       "bldprefix": "static",
       "defs": defs,
       "ccflags": ccflags,
+      "cppflags": cppflags,
       "incdirs": incdirs,
       "srcs": srcs,
       "custom": [zlibRequire]
    },
    {
-      "name": "blosc",
+      "name": BloscName(static=False),
+      "alias": "blosc-shared",
       "type": "sharedlib",
       "desc": "Blosc shared library",
       "bldprefix": "shared",
@@ -142,6 +152,7 @@ projs = [
       "install_name": "libblosc.1.dylib",
       "defs": defs + ["BLOSC_SHARED_LIBRARY", "BLOSC_DLL_EXPORT"],
       "ccflags": ccflags,
+      "cppflags": cppflags,
       "incdirs": incdirs,
       "srcs": srcs,
       "custom": [zlibRequire, threads.Require]
@@ -149,8 +160,14 @@ projs = [
 ]
 
 excons.AddHelpOptions(blosc=build_opts)
+excons.AddHelpTargets({"blosc": "Blosc static and shared libraries",
+                       "blosc-static": "Blosc static library",
+                       "blosc-shared": "Blosc shared library"})
 
 targets = excons.DeclareTargets(env, projs)
 
-env.Depends(targets["blosc"], blosc_headers)
-env.Depends(targets["blosc_s"], blosc_headers)
+env.Depends(targets["blosc-static"], blosc_headers)
+env.Depends(targets["blosc-shared"], blosc_headers)
+env.Alias("blosc", ["blosc-static", "blosc-shared"])
+
+Export("BloscName BloscPath RequireBlosc")
