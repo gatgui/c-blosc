@@ -60,12 +60,12 @@ else:
 # Zstd setup
 if cfg["zstd"]:
    defs.append("HAVE_ZSTD")
-   incdirs.extend(["internal-complibs/zstd-1.1.4",
-                   "internal-complibs/zstd-1.1.4/common"])
-   srcs.extend(excons.glob("internal-complibs/zstd-1.1.4/common/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.1.4/compress/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.1.4/decompress/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.1.4/dictBuilder/*.c"))
+   incdirs.extend(["internal-complibs/zstd-1.3.0",
+                   "internal-complibs/zstd-1.3.0/common"])
+   srcs.extend(excons.glob("internal-complibs/zstd-1.3.0/common/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.3.0/compress/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.3.0/decompress/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.3.0/dictBuilder/*.c"))
 
 if cfg["sse2"]:
    defs.append("SHUFFLE_SSE2_ENABLED")
@@ -147,7 +147,7 @@ projs = [
       "type": "sharedlib",
       "desc": "Blosc shared library",
       "bldprefix": "shared",
-      "version": "1.11.3",
+      "version": "1.12.0",
       "soname": "libblosc.so.1",
       "install_name": "libblosc.1.dylib",
       "defs": defs + ["BLOSC_SHARED_LIBRARY", "BLOSC_DLL_EXPORT"],
