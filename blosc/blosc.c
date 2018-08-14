@@ -13,8 +13,10 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <assert.h>
+
+#include "fastcopy.h"
+
 #if defined(USING_CMAKE)
   #include "config.h"
 #endif /*  USING_CMAKE */
@@ -64,7 +66,7 @@
 
 /* Some useful units */
 #define KB 1024
-#define MB (1024*KB)
+#define MB (1024 * (KB))
 
 /* Minimum buffer size to be compressed */
 #define MIN_BUFFERSIZE 128       /* Cannot be smaller than 66 */
@@ -73,7 +75,7 @@
 #define MAX_SPLITS 16            /* Cannot be larger than 128 */
 
 /* The size of L1 cache.  32 KB is quite common nowadays. */
-#define L1 (32*KB)
+#define L1 (32 * (KB))
 
 /* Have problems using posix barriers when symbol value is 200112L */
 /* This requires more investigation, but will work for the moment */
@@ -528,19 +530,7 @@ static int get_accel(const struct blosc_context* context) {
   int32_t clevel = context->clevel;
   int32_t typesize = context->typesize;
 
-  if (clevel == 9) {
-    return 1;
-  }
-  if (context->compcode == BLOSC_BLOSCLZ) {
-    /* Compute the power of 2. See:
-     * http://www.exploringbinary.com/ten-ways-to-check-if-an-integer-is-a-power-of-two-in-c/
-     */
-    int32_t tspow2 = ((typesize != 0) && !(typesize & (typesize - 1)));
-    if (tspow2 && typesize < 32) {
-      return 32;
-    }
-  }
-  else if (context->compcode == BLOSC_LZ4) {
+  if (context->compcode == BLOSC_LZ4) {
     /* This acceleration setting based on discussions held in:
      * https://groups.google.com/forum/#!topic/lz4c/zosy90P8MQw
      */
@@ -614,7 +604,7 @@ static int blosc_c(const struct blosc_context* context, int32_t blocksize,
     }
     if (context->compcode == BLOSC_BLOSCLZ) {
       cbytes = blosclz_compress(context->clevel, _tmp+j*neblock, neblock,
-                                dest, maxout, accel);
+                                dest, maxout);
     }
     #if defined(HAVE_LZ4)
     else if (context->compcode == BLOSC_LZ4) {
@@ -669,7 +659,7 @@ static int blosc_c(const struct blosc_context* context, int32_t blocksize,
       if ((ntbytes+neblock) > maxbytes) {
         return 0;    /* Non-compressible data */
       }
-      memcpy(dest, _tmp+j*neblock, neblock);
+      fastcopy(dest, _tmp + j * neblock, neblock);
       cbytes = neblock;
     }
     _sw32(dest - 4, cbytes);
@@ -724,7 +714,7 @@ static int blosc_d(struct blosc_context* context, int32_t blocksize,
     ctbytes += (int32_t)sizeof(int32_t);
     /* Uncompress */
     if (cbytes == neblock) {
-      memcpy(_tmp, src, neblock);
+      fastcopy(_tmp, src, neblock);
       nbytes = neblock;
     }
     else {
@@ -815,9 +805,8 @@ static int serial_blosc(struct blosc_context* context)
     if (context->compress) {
       if (*(context->header_flags) & BLOSC_MEMCPYED) {
         /* We want to memcpy only */
-        memcpy(context->dest+BLOSC_MAX_OVERHEAD+j*context->blocksize,
-                context->src+j*context->blocksize,
-                bsize);
+        fastcopy(context->dest + BLOSC_MAX_OVERHEAD + j * context->blocksize,
+                 context->src + j * context->blocksize, bsize);
         cbytes = bsize;
       }
       else {
@@ -834,9 +823,8 @@ static int serial_blosc(struct blosc_context* context)
     else {
       if (*(context->header_flags) & BLOSC_MEMCPYED) {
         /* We want to memcpy only */
-        memcpy(context->dest+j*context->blocksize,
-                context->src+BLOSC_MAX_OVERHEAD+j*context->blocksize,
-                bsize);
+        fastcopy(context->dest + j * context->blocksize,
+                 context->src + BLOSC_MAX_OVERHEAD + j * context->blocksize, bsize);
         cbytes = bsize;
       }
       else {
@@ -915,6 +903,19 @@ static int do_job(struct blosc_context* context)
              ((codec) == BLOSC_ZSTD) ? 1 : 0 )
 
 
+/* Conditions for splitting a block before compressing with a codec. */
+static int split_block(int compcode, int typesize, int blocksize) {
+  /* Normally all the compressors designed for speed benefit from a
+     split.  However, in conducted benchmarks LZ4 seems that it runs
+     faster if we don't split, which is quite surprising. */
+  return (((compcode == BLOSC_BLOSCLZ) ||
+           //(compcode == BLOSC_LZ4) ||
+           (compcode == BLOSC_SNAPPY)) &&
+          (typesize <= MAX_SPLITS) &&
+          (blocksize / typesize) >= MIN_BUFFERSIZE);
+}
+
+
 static int32_t compute_blocksize(struct blosc_context* context, int32_t clevel,
                                  int32_t typesize, int32_t nbytes,
                                  int32_t forced_blocksize)
@@ -946,35 +947,53 @@ static int32_t compute_blocksize(struct blosc_context* context, int32_t clevel,
     }
 
     switch (clevel) {
-    case 0:
-      /* Case of plain copy */
-      blocksize /= 4;
-      break;
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-      blocksize *= 1;
-      break;
-    case 5:
-      blocksize *= 2;
-      break;
-    case 6:
-      blocksize *= 4;
-      break;
-    case 7:
-    case 8:
-      blocksize *= 8;
-      break;
-    case 9:
-      /* Do not exceed 256 KB for non HCR codecs */
-      blocksize *= 8;
-      if (HCR(context->compcode)) {
+      case 0:
+        /* Case of plain copy */
+        blocksize /= 4;
+        break;
+      case 1:
+        blocksize /= 2;
+        break;
+      case 2:
+        blocksize *= 1;
+        break;
+      case 3:
         blocksize *= 2;
-      }
-      break;
+        break;
+      case 4:
+      case 5:
+        blocksize *= 4;
+        break;
+      case 6:
+      case 7:
+      case 8:
+        blocksize *= 8;
+        break;
+      case 9:
+        blocksize *= 8;
+        if (HCR(context->compcode)) {
+          blocksize *= 2;
+        }
+        break;
+      default:
+        assert(0);
+        break;
     }
   }
+
+  /* Enlarge the blocksize for splittable codecs */
+  if (clevel > 0 && split_block(context->compcode, typesize, blocksize)) {
+    if (blocksize > (1 << 16)) {
+      /* Do not use a too large split buffer (> 64 KB) for splitting codecs */
+      blocksize = (1 << 16);
+    }
+    blocksize *= typesize;
+    if (blocksize < (1 << 16)) {
+      /* Do not use a too small blocksize (< 64 KB) when typesize is small */
+      blocksize = (1 << 16);
+    }
+  }
+
   /* Check that blocksize is not too large */
   if (blocksize > (int32_t)nbytes) {
     blocksize = nbytes;
@@ -1049,19 +1068,6 @@ static int initialize_context_compression(struct blosc_context* context,
   context->nblocks = (context->leftover > 0) ? (context->nblocks + 1) : context->nblocks;
 
   return 1;
-}
-
-
-/* Conditions for splitting a block before compressing with a codec. */
-static int split_block(int compcode, int typesize, int blocksize) {
-  /* Normally all the compressors designed for speed benefit from a
-     split.  However, in conducted benchmarks LZ4 seems that it runs
-     faster if we don't split, which is quite surprising. */
-  return (((compcode == BLOSC_BLOSCLZ) ||
-	   //(compcode == BLOSC_LZ4) ||
-	   (compcode == BLOSC_SNAPPY)) &&
-	  (typesize <= MAX_SPLITS) &&
-	  (blocksize / typesize) >= MIN_BUFFERSIZE);
 }
 
 
@@ -1166,30 +1172,20 @@ int blosc_compress_context(struct blosc_context* context)
 {
   int32_t ntbytes = 0;
 
-  if (!(*(context->header_flags) & BLOSC_MEMCPYED)) {
     /* Do the actual compression */
     ntbytes = do_job(context);
     if (ntbytes < 0) {
       return -1;
     }
     if ((ntbytes == 0) && (context->sourcesize+BLOSC_MAX_OVERHEAD <= context->destsize)) {
-      /* Last chance for fitting `src` buffer in `dest`.  Update flags
-       and do a memcpy later on. */
+      /* Last chance for fitting `src` buffer in `dest`.  Update flags and force a copy. */
       *(context->header_flags) |= BLOSC_MEMCPYED;
+      context->num_output_bytes = BLOSC_MAX_OVERHEAD;  /* reset the output bytes in previous step */
+      ntbytes = do_job(context);
+      if (ntbytes < 0) {
+        return -1;
+      }
     }
-  }
-
-  if (*(context->header_flags) & BLOSC_MEMCPYED) {
-    if (context->sourcesize + BLOSC_MAX_OVERHEAD > context->destsize) {
-      /* We are exceeding maximum output size */
-      ntbytes = 0;
-    }
-    else {
-      memcpy(context->dest+BLOSC_MAX_OVERHEAD, context->src,
-             context->sourcesize);
-      ntbytes = context->sourcesize + BLOSC_MAX_OVERHEAD;
-    }
-  }
 
   /* Set the number of compressed bytes in header */
   _sw32(context->dest + 12, ntbytes);
@@ -1377,17 +1373,10 @@ int blosc_run_decompression_with_context(struct blosc_context* context,
     return -1;
   }
 
-  /* Check whether this buffer is memcpy'ed */
-  if (*(context->header_flags) & BLOSC_MEMCPYED) {
-      memcpy(dest, (uint8_t *)src+BLOSC_MAX_OVERHEAD, context->sourcesize);
-      ntbytes = context->sourcesize;
-  }
-  else {
-    /* Do the actual decompression */
-    ntbytes = do_job(context);
-    if (ntbytes < 0) {
-      return -1;
-    }
+  /* Do the actual decompression */
+  ntbytes = do_job(context);
+  if (ntbytes < 0) {
+    return -1;
   }
 
   assert(ntbytes <= (int32_t)destsize);
@@ -1539,9 +1528,8 @@ int blosc_getitem(const void *src, int start, int nitems, void *dest)
     /* Do the actual data copy */
     if (flags & BLOSC_MEMCPYED) {
       /* We want to memcpy only */
-      memcpy((uint8_t *)dest + ntbytes,
-          (uint8_t *)src + BLOSC_MAX_OVERHEAD + j*blocksize + startb,
-             bsize2);
+      fastcopy((uint8_t *) dest + ntbytes,
+               (uint8_t *) src + BLOSC_MAX_OVERHEAD + j * blocksize + startb, bsize2);
       cbytes = bsize2;
     }
     else {
@@ -1559,7 +1547,7 @@ int blosc_getitem(const void *src, int start, int nitems, void *dest)
         break;
       }
       /* Copy to destination */
-      memcpy((uint8_t *)dest + ntbytes, tmp2 + startb, bsize2);
+      fastcopy((uint8_t *) dest + ntbytes, tmp2 + startb, bsize2);
       cbytes = bsize2;
     }
     ntbytes += cbytes;
@@ -1669,8 +1657,8 @@ static void *t_blosc(void *ctxt)
       if (compress) {
         if (flags & BLOSC_MEMCPYED) {
           /* We want to memcpy only */
-          memcpy(dest+BLOSC_MAX_OVERHEAD+nblock_*blocksize,
-                 src+nblock_*blocksize, bsize);
+          fastcopy(dest + BLOSC_MAX_OVERHEAD + nblock_ * blocksize, src + nblock_ * blocksize,
+                   bsize);
           cbytes = bsize;
         }
         else {
@@ -1682,8 +1670,8 @@ static void *t_blosc(void *ctxt)
       else {
         if (flags & BLOSC_MEMCPYED) {
           /* We want to memcpy only */
-          memcpy(dest+nblock_*blocksize,
-                 src+BLOSC_MAX_OVERHEAD+nblock_*blocksize, bsize);
+          fastcopy(dest + nblock_ * blocksize, src + BLOSC_MAX_OVERHEAD + nblock_ * blocksize,
+                   bsize);
           cbytes = bsize;
         }
         else {
@@ -1725,7 +1713,7 @@ static void *t_blosc(void *ctxt)
         /* End of critical section */
 
         /* Copy the compressed buffer to destination */
-        memcpy(dest+ntdest, tmp2, cbytes);
+        fastcopy(dest + ntdest, tmp2, cbytes);
       }
       else {
         nblock_++;
