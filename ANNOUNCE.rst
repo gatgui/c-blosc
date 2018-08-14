@@ -1,14 +1,14 @@
 ===============================================================
- Announcing C-Blosc 1.13.0
+ Announcing C-Blosc 1.13.2
  A blocking, shuffling and lossless compression library for C
 ===============================================================
 
 What is new?
 ============
 
-Fixed a bug uncovered by the python-blosc test suite: when a buffer is
-to be copied, then we should reserve space for the header, not block
-pointers.
+- C-Blosc can be compiled on CentOS 6 now.
+
+- LZ4 internal codec upgraded to 1.8.1.
 
 For more info, please see the release notes in:
 
