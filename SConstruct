@@ -147,7 +147,7 @@ projs = [
       "type": "sharedlib",
       "desc": "Blosc shared library",
       "bldprefix": "shared",
-      "version": "1.13.7",
+      "version": "1.14.0",
       "soname": "libblosc.so.1",
       "install_name": "libblosc.1.dylib",
       "defs": defs + ["BLOSC_SHARED_LIBRARY", "BLOSC_DLL_EXPORT"],
