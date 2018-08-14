@@ -27,8 +27,8 @@ customs = []
 # Lz4 setup
 if cfg["lz4"]:
    defs.append("HAVE_LZ4")
-   incdirs.append("internal-complibs/lz4-1.7.5")
-   srcs.extend(excons.glob("internal-complibs/lz4-1.7.5/*.c"))
+   incdirs.append("internal-complibs/lz4-1.8.0")
+   srcs.extend(excons.glob("internal-complibs/lz4-1.8.0/*.c"))
 
 # Snappy setup
 if cfg["snappy"]:
@@ -60,12 +60,12 @@ else:
 # Zstd setup
 if cfg["zstd"]:
    defs.append("HAVE_ZSTD")
-   incdirs.extend(["internal-complibs/zstd-1.3.0",
-                   "internal-complibs/zstd-1.3.0/common"])
-   srcs.extend(excons.glob("internal-complibs/zstd-1.3.0/common/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.3.0/compress/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.3.0/decompress/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.3.0/dictBuilder/*.c"))
+   incdirs.extend(["internal-complibs/zstd-1.3.3",
+                   "internal-complibs/zstd-1.3.3/common"])
+   srcs.extend(excons.glob("internal-complibs/zstd-1.3.3/common/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.3.3/compress/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.3.3/decompress/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.3.3/dictBuilder/*.c"))
 
 if cfg["sse2"]:
    defs.append("SHUFFLE_SSE2_ENABLED")
@@ -147,7 +147,7 @@ projs = [
       "type": "sharedlib",
       "desc": "Blosc shared library",
       "bldprefix": "shared",
-      "version": "1.12.2",
+      "version": "1.13.0",
       "soname": "libblosc.so.1",
       "install_name": "libblosc.1.dylib",
       "defs": defs + ["BLOSC_SHARED_LIBRARY", "BLOSC_DLL_EXPORT"],
