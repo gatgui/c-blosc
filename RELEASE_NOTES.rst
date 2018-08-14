@@ -7,6 +7,13 @@
 :URL: http://www.blosc.org
 
 
+Changes from 1.14.1 to 1.14.2
+=============================
+
+- Reverted the $Configuration var in CMake configuration for Windows so
+  as to restore the compatibility with MS VisualStudio compilers.
+
+
 Changes from 1.14.0 to 1.14.1
 =============================
 
