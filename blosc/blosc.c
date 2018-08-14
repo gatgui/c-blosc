@@ -1075,9 +1075,13 @@ static int initialize_context_compression(struct blosc_context* context,
 
   /* Check buffer size limits */
   if (sourcesize > BLOSC_MAX_BUFFERSIZE) {
-    /* If buffer is too large, give up. */
     fprintf(stderr, "Input buffer size cannot exceed %d bytes\n",
             BLOSC_MAX_BUFFERSIZE);
+    return -1;
+  }
+  if (destsize <= BLOSC_MAX_OVERHEAD) {
+    fprintf(stderr, "Output buffer size should be larger than %d bytes\n",
+            BLOSC_MAX_OVERHEAD);
     return -1;
   }
 
@@ -1282,7 +1286,7 @@ int blosc_compress(int clevel, int doshuffle, size_t typesize, size_t nbytes,
   /* Check if should initialize */
   if (!g_initlib) blosc_init();
 
-  /* Check for a BLOSC_CLEVEL environment variable */
+  /* Check for environment variables */
   envvar = getenv("BLOSC_CLEVEL");
   if (envvar != NULL) {
     long value;
@@ -1292,7 +1296,6 @@ int blosc_compress(int clevel, int doshuffle, size_t typesize, size_t nbytes,
     }
   }
 
-  /* Check for a BLOSC_SHUFFLE environment variable */
   envvar = getenv("BLOSC_SHUFFLE");
   if (envvar != NULL) {
     if (strcmp(envvar, "NOSHUFFLE") == 0) {
@@ -1306,7 +1309,6 @@ int blosc_compress(int clevel, int doshuffle, size_t typesize, size_t nbytes,
     }
   }
 
-  /* Check for a BLOSC_TYPESIZE environment variable */
   envvar = getenv("BLOSC_TYPESIZE");
   if (envvar != NULL) {
     long value;
@@ -1316,14 +1318,12 @@ int blosc_compress(int clevel, int doshuffle, size_t typesize, size_t nbytes,
     }
   }
 
-  /* Check for a BLOSC_COMPRESSOR environment variable */
   envvar = getenv("BLOSC_COMPRESSOR");
   if (envvar != NULL) {
     result = blosc_set_compressor(envvar);
     if (result < 0) { return result; }
   }
 
-  /* Check for a BLOSC_COMPRESSOR environment variable */
   envvar = getenv("BLOSC_BLOCKSIZE");
   if (envvar != NULL) {
     long blocksize;
@@ -1333,7 +1333,6 @@ int blosc_compress(int clevel, int doshuffle, size_t typesize, size_t nbytes,
     }
   }
 
-  /* Check for a BLOSC_NTHREADS environment variable */
   envvar = getenv("BLOSC_NTHREADS");
   if (envvar != NULL) {
     long nthreads;
@@ -1344,7 +1343,6 @@ int blosc_compress(int clevel, int doshuffle, size_t typesize, size_t nbytes,
     }
   }
 
-  /* Check for a BLOSC_SPLITMODE environment variable */
   envvar = getenv("BLOSC_SPLITMODE");
   if (envvar != NULL) {
     if (strcmp(envvar, "FORWARD_COMPAT") == 0) {
@@ -1421,6 +1419,11 @@ int blosc_run_decompression_with_context(struct blosc_context* context,
   context->typesize = (int32_t)context->src[3];      /* typesize */
   context->sourcesize = sw32_(context->src + 4);     /* buffer size */
   context->blocksize = sw32_(context->src + 8);      /* block size */
+
+  if (context->blocksize <= 0) {
+    fprintf(stderr, "blocksize cannot be negative or 0; corrupt header?");
+    return -1;
+  }
 
   if (version != BLOSC_VERSION_FORMAT) {
     /* Version from future */
@@ -2018,9 +2021,16 @@ int blosc_get_complib_info(const char *compname, char **complib, char **version)
     clibversion = sbuffer;
   }
 #endif /* HAVE_ZSTD */
+  else {
+    /* Unsupported library */
+    if (complib != NULL) *complib = NULL;
+    if (version != NULL) *version = NULL;
+    return -1;
+  }
 
-  *complib = strdup(clibname);
-  *version = strdup(clibversion);
+  if (complib != NULL) *complib = strdup(clibname);
+  if (version != NULL) *version = strdup(clibversion);
+
   return clibcode;
 }
 

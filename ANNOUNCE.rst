@@ -1,16 +1,15 @@
 ===============================================================
- Announcing C-Blosc 1.14.3
+ Announcing C-Blosc 1.14.4
  A blocking, shuffling and lossless compression library for C
 ===============================================================
 
 What is new?
 ============
 
-The main change for this release is that the pthreads library is
-not needed on any Windows build anymore.  Thanks to Steven G. Johnson.
-Also, the internal Zstd sources have been updated to 1.3.4; expect
-an important performance boost (can be up to 10%, specially for low
-compression levels).
+This is a maintenance release.  Now it is possible to deactivate SSE2,
+which can be useful e.g. when doing cross-compiling from an Intel box.
+Also, there is better protection against passing small output buffers
+for compression, and other improvements.
 
 For more info, please see the release notes in:
 
