@@ -1,13 +1,19 @@
 ===============================================================
- Announcing C-Blosc 1.13.7
+ Announcing C-Blosc 1.14.0
  A blocking, shuffling and lossless compression library for C
 ===============================================================
 
 What is new?
 ============
 
-More tests for binaries in https://bintray.com/blosc/Conan.
-Nothing in code has changed, so no need for upgrade.
+The most important change is a new split mode that favors forward
+compatibility.  That means that, from now on, all the buffers created
+starting with blosc 1.14.0 will be forward compatible with any previous
+versions of the library --at least until 1.3.0, when support for
+multi-codec was introduced.
+
+Also, a new policy about forward compatibility has been put in place.
+See blog entry at: http://blosc.org/posts/new-forward-compat-policy
 
 For more info, please see the release notes in:
 
