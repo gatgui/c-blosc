@@ -1,19 +1,15 @@
 ===============================================================
- Announcing C-Blosc 1.14.0
+ Announcing C-Blosc 1.14.1
  A blocking, shuffling and lossless compression library for C
 ===============================================================
 
 What is new?
 ============
 
-The most important change is a new split mode that favors forward
-compatibility.  That means that, from now on, all the buffers created
-starting with blosc 1.14.0 will be forward compatible with any previous
-versions of the library --at least until 1.3.0, when support for
-multi-codec was introduced.
-
-Also, a new policy about forward compatibility has been put in place.
-See blog entry at: http://blosc.org/posts/new-forward-compat-policy
+The main reason for this release is a bug that caused C-Blosc to crash
+on platforms requiring strict alignment (as in some kinds of ARM CPUs).
+Thanks to Elvis Stansvik and Michael Hudson-Doyle for their help.
+For the discussion, see https://github.com/Blosc/c-blosc/issues/223 .
 
 For more info, please see the release notes in:
 
