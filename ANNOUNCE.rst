@@ -1,14 +1,13 @@
 ===============================================================
- Announcing C-Blosc 1.13.5
+ Announcing C-Blosc 1.13.6
  A blocking, shuffling and lossless compression library for C
 ===============================================================
 
 What is new?
 ============
 
-New conan binaries publicly accessible in https://bintray.com/blosc/Conan.
-Still experimental, but feedback is appreciated.  No changes have been
-made to codebase, so yo don't need to update.
+More tests for binaries in https://bintray.com/blosc/Conan.
+Nothing in code has changed, so no need for upgrade.
 
 For more info, please see the release notes in:
 
