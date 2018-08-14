@@ -27,8 +27,8 @@ customs = []
 # Lz4 setup
 if cfg["lz4"]:
    defs.append("HAVE_LZ4")
-   incdirs.append("internal-complibs/lz4-1.8.0")
-   srcs.extend(excons.glob("internal-complibs/lz4-1.8.0/*.c"))
+   incdirs.append("internal-complibs/lz4-1.8.1.2")
+   srcs.extend(excons.glob("internal-complibs/lz4-1.8.1.2/*.c"))
 
 # Snappy setup
 if cfg["snappy"]:
@@ -147,7 +147,7 @@ projs = [
       "type": "sharedlib",
       "desc": "Blosc shared library",
       "bldprefix": "shared",
-      "version": "1.13.1",
+      "version": "1.13.2",
       "soname": "libblosc.so.1",
       "install_name": "libblosc.1.dylib",
       "defs": defs + ["BLOSC_SHARED_LIBRARY", "BLOSC_DLL_EXPORT"],
