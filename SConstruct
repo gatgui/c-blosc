@@ -8,7 +8,6 @@ env = excons.MakeBaseEnv()
 
 cfg = {
    "lz4": (excons.GetArgument("blosc-no-lz4", 0, int) == 0),
-   "snappy": (excons.GetArgument("blosc-no-snappy", 0, int) == 0),
    "zlib": (excons.GetArgument("blosc-no-zlib", 0, int) == 0),
    "zstd": (excons.GetArgument("blosc-no-zstd", 0, int) == 0),
    "sse2": (excons.GetArgument("blosc-sse2", 1, int) != 0),
@@ -27,14 +26,8 @@ customs = []
 # Lz4 setup
 if cfg["lz4"]:
    defs.append("HAVE_LZ4")
-   incdirs.append("internal-complibs/lz4-1.8.1.2")
-   srcs.extend(excons.glob("internal-complibs/lz4-1.8.1.2/*.c"))
-
-# Snappy setup
-if cfg["snappy"]:
-   defs.append("HAVE_SNAPPY")
-   incdirs.append("internal-complibs/snappy-1.1.1")
-   srcs.extend(excons.glob("internal-complibs/snappy-1.1.1/*.cc"))
+   incdirs.append("internal-complibs/lz4-1.9.2")
+   srcs.extend(excons.glob("internal-complibs/lz4-1.9.2/*.c"))
 
 # Zlib setup
 def zlibName(static):
@@ -60,12 +53,12 @@ else:
 # Zstd setup
 if cfg["zstd"]:
    defs.append("HAVE_ZSTD")
-   incdirs.extend(["internal-complibs/zstd-1.3.4",
-                   "internal-complibs/zstd-1.3.4/common"])
-   srcs.extend(excons.glob("internal-complibs/zstd-1.3.4/common/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.3.4/compress/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.3.4/decompress/*.c"))
-   srcs.extend(excons.glob("internal-complibs/zstd-1.3.4/dictBuilder/*.c"))
+   incdirs.extend(["internal-complibs/zstd-1.4.5",
+                   "internal-complibs/zstd-1.4.5/common"])
+   srcs.extend(excons.glob("internal-complibs/zstd-1.4.5/common/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.4.5/compress/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.4.5/decompress/*.c"))
+   srcs.extend(excons.glob("internal-complibs/zstd-1.4.5/dictBuilder/*.c"))
 
 if cfg["sse2"]:
    defs.append("SHUFFLE_SSE2_ENABLED")
@@ -93,7 +86,6 @@ else:
 build_opts = """BLOSC OPTIONS
    blosc-suffix        : Blosc library names suffix []
    blosc-no-lz4=0|1    : Disable lz4 support        [0]
-   blosc-no-snappy=0|1 : Disable snappy support     [0]
    blosc-no-zlib=0|1   : Disable zlib support       [0]
    blosc-no-zstd=0|1   : Disable zstd support       [0]
    blosc-sse2=0|1      : Enable SSE2 support        [1]
