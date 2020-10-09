@@ -23,6 +23,9 @@ cppflags = ""
 srcs = filter(lambda x: "-sse2" not in x and "-avx2" not in x, excons.glob("blosc/*.c"))
 customs = []
 
+if sys.platform.startswith("linux"):
+   ccflags.extend(["-std=gnu99", "-Wno-sign-compare"])
+
 # Lz4 setup
 if cfg["lz4"]:
    defs.append("HAVE_LZ4")
